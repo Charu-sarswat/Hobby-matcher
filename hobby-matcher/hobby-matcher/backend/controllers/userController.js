@@ -58,18 +58,15 @@ const findMatches = async (req, res) => {
             'username hobbies isOnline'
         );
 
-        // Calculate similarity scores based on common hobbies
+        // Calculate similarity scores and add online status priority
         const matchesWithScores = allUsers.map(user => {
-            // Convert both users' hobbies to lowercase for better matching
             const currentUserHobbies = currentUser.hobbies.map(h => h.toLowerCase());
             const matchUserHobbies = user.hobbies.map(h => h.toLowerCase());
 
-            // Count common hobbies
             const commonHobbies = currentUserHobbies.filter(hobby => 
                 matchUserHobbies.includes(hobby)
             );
 
-            // Calculate similarity score
             const similarityScore = commonHobbies.length / 
                 Math.max(currentUserHobbies.length, matchUserHobbies.length);
 
@@ -83,21 +80,19 @@ const findMatches = async (req, res) => {
             };
         });
 
-        // Sort users by similarity score (highest to lowest)
-        const sortedMatches = matchesWithScores.sort((a, b) => 
-            b.similarityScore - a.similarityScore
-        );
+        // Sort users by online status first, then by similarity score
+        const sortedMatches = matchesWithScores.sort((a, b) => {
+            // First priority: online status
+            if (a.isOnline !== b.isOnline) {
+                return a.isOnline ? -1 : 1;
+            }
+            // Second priority: similarity score
+            return b.similarityScore - a.similarityScore;
+        });
 
         return res.json({
             success: true,
-            matches: sortedMatches.map(match => ({
-                _id: match._id,
-                username: match.username,
-                hobbies: match.hobbies,
-                isOnline: match.isOnline,
-                commonHobbies: match.commonHobbies,
-                similarityScore: match.similarityScore
-            }))
+            matches: sortedMatches
         });
 
     } catch (error) {

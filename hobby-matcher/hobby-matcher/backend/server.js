@@ -55,6 +55,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/user'));
 
 const connectedUsers = new Map();
+const onlineUsers = new Map();
 
 // Socket.io
 const io = new Server(httpServer, {
@@ -70,27 +71,40 @@ io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     socket.on('register-user', async (userId) => {
+        console.log('Registering user:', userId);
+        onlineUsers.set(userId, socket.id);
+        socket.userId = userId;
+
         try {
             // Update user's online status in database
             await User.findByIdAndUpdate(userId, { isOnline: true });
-
+            
             // Broadcast online status to all clients
             io.emit('user-status-change', { userId, isOnline: true });
-
+            
             socket.userId = userId;
         } catch (error) {
             console.error('Error updating online status:', error);
         }
     });
 
+    socket.on('get-online-users', () => {
+        // Send the list of online users to the requesting client
+        socket.emit('online-users-list', Array.from(onlineUsers.keys()));
+    });
+
     socket.on('disconnect', async () => {
         if (socket.userId) {
+            onlineUsers.delete(socket.userId);
             try {
                 // Update user's online status in database
                 await User.findByIdAndUpdate(socket.userId, { isOnline: false });
-
+                
                 // Broadcast offline status to all clients
-                io.emit('user-status-change', { userId: socket.userId, isOnline: false });
+                io.emit('user-status-change', { 
+                    userId: socket.userId, 
+                    isOnline: false 
+                });
             } catch (error) {
                 console.error('Error updating offline status:', error);
             }

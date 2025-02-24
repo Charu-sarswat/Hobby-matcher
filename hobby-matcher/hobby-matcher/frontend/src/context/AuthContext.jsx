@@ -22,9 +22,14 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (user) {
-            socket.emit('register-user', user._id);
+            // Create new socket connection
+            const newSocket = io(API_URL);
+            
+            // Register user
+            newSocket.emit('register-user', user._id);
 
-            socket.on('user-status-change', ({ userId, isOnline }) => {
+            // Listen for user status changes
+            newSocket.on('user-status-change', ({ userId, isOnline }) => {
                 setOnlineUsers(prev => {
                     const newSet = new Set(prev);
                     if (isOnline) {
@@ -36,8 +41,16 @@ export const AuthProvider = ({ children }) => {
                 });
             });
 
+            // Request initial online users
+            newSocket.emit('get-online-users');
+
+            // Handle initial online users list
+            newSocket.on('online-users-list', (onlineUserIds) => {
+                setOnlineUsers(new Set(onlineUserIds));
+            });
+
             return () => {
-                socket.disconnect();
+                newSocket.disconnect();
             };
         }
     }, [user]);
