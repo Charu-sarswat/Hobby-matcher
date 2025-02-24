@@ -27,6 +27,7 @@ import ExploreIcon from '@mui/icons-material/Explore';
 import { motion } from 'framer-motion';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import CasinoIcon from '@mui/icons-material/Casino';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const Dashboard = () => {
@@ -144,6 +145,23 @@ const Dashboard = () => {
             }
             return acc;
         }, { similar: [], different: [] });
+    };
+
+    const handleRandomConnect = () => {
+        // Find the first online user from matches
+        const onlineUsers = matches.filter(match => match.isOnline);
+        
+        if (onlineUsers.length > 0) {
+            // Get the first online user
+            const randomUser = onlineUsers[0];
+            // Create room ID
+            const roomId = [user._id, randomUser._id].sort().join('-');
+            
+            // Start the call
+            handleStartChat(randomUser._id);
+        } else {
+            alert('No online users available at the moment');
+        }
     };
 
     const MatchListSection = ({ matches, title }) => (
@@ -320,6 +338,34 @@ const Dashboard = () => {
                         </Typography>
                     </Paper>
                 </Grid>
+                
+                {/* Add the new Random Connect button here */}
+                <Grid item xs={12}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <Button
+                            variant="contained"
+                            onClick={handleRandomConnect}
+                            startIcon={<CasinoIcon />}
+                            sx={{
+                                width: '100%',
+                                py: 2,
+                                mb: 3,
+                                background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, #FF8E53 0%, #FF6B6B 100%)',
+                                },
+                                fontSize: '1.1rem'
+                            }}
+                        >
+                            Connect to Random User
+                        </Button>
+                    </motion.div>
+                </Grid>
+                
                 <Grid item xs={12}>
                     <Box className="matches-container">
                         <motion.div
