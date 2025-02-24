@@ -8,30 +8,44 @@ const WaitingRoom = () => {
     const navigate = useNavigate();
     const { socket, user } = useAuth();
 
+    // useEffect(() => {
+    //     if (socket) {
+    //         // Listen for match found
+    //         socket.on('random-match-found', ({ roomId, peer }) => {
+    //             console.log('Match found:', peer.username);
+    //             alert(`Connected with ${peer.username}!`);
+    //             navigate(`/video-chat/${roomId}`);
+    //         });
+
+    //         // Listen for errors
+    //         socket.on('matching-error', ({ message }) => {
+    //             alert(message);
+    //             navigate('/dashboard');
+    //         });
+    //     }
+
+    //     return () => {
+    //         if (socket) {
+    //             socket.off('random-match-found');
+    //             socket.off('matching-error');
+    //         }
+    //     };
+    // }, [socket, navigate]);
+
+
     useEffect(() => {
-        if (socket) {
-            // Listen for match found
-            socket.on('random-match-found', ({ roomId, peer }) => {
-                console.log('Match found:', peer.username);
-                alert(`Connected with ${peer.username}!`);
-                navigate(`/video-chat/${roomId}`);
-            });
+        // Listen for a match being found
+        socket.on('random-match-found', ({ roomId, peer }) => {
+            console.log('Match found:', roomId, peer);
+            // Navigate to the video chat room once a match is found
+            navigate(/video-chat/${roomId});
+        });
 
-            // Listen for errors
-            socket.on('matching-error', ({ message }) => {
-                alert(message);
-                navigate('/dashboard');
-            });
-        }
-
+        // Cleanup listener on unmount
         return () => {
-            if (socket) {
-                socket.off('random-match-found');
-                socket.off('matching-error');
-            }
+            socket.off('random-match-found');
         };
     }, [socket, navigate]);
-
     const handleCancel = () => {
         if (socket && user) {
             socket.emit('leave-random-queue', user._id);
