@@ -6,6 +6,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const User = require('./models/User');
 const waitingUsers = new Map(); // Change to Map for better tracking
+const waitingRoom = new Set(); // Add at the top with other declarations
 
 // Load correct env file
 dotenv.config({
@@ -103,6 +104,14 @@ io.on('connection', (socket) => {
             if (user.socketId === socket.id) {
                 waitingUsers.delete(userId);
                 console.log(`User ${userId} removed from queue due to disconnect`);
+                break;
+            }
+        }
+
+        // Remove from waiting room
+        for (const user of waitingRoom) {
+            if (user.socketId === socket.id) {
+                waitingRoom.delete(user);
                 break;
             }
         }
@@ -239,6 +248,62 @@ io.on('connection', (socket) => {
         if (waitingUsers.has(userId)) {
             waitingUsers.delete(userId);
             console.log(`User ${userId} left random queue`);
+        }
+    });
+
+    socket.on('join-waiting-room', (userData) => {
+        try {
+            console.log('User joined waiting room:', userData.username);
+            
+            // Check if there's already someone in the waiting room
+            if (waitingRoom.size > 0) {
+                // Get the first waiting user
+                const waitingUser = Array.from(waitingRoom)[0];
+                waitingRoom.delete(waitingUser);
+
+                // Create a unique room ID for the pair
+                const roomId = `random-${Date.now()}`;
+
+                // Notify both users about the match
+                io.to(waitingUser.socketId).emit('match-found', {
+                    roomId,
+                    peer: {
+                        username: userData.username,
+                        id: userData.userId
+                    }
+                });
+
+                socket.emit('match-found', {
+                    roomId,
+                    peer: {
+                        username: waitingUser.username,
+                        id: waitingUser.userId
+                    }
+                });
+
+            } else {
+                // Add current user to waiting room
+                waitingRoom.add({
+                    socketId: socket.id,
+                    userId: userData.userId,
+                    username: userData.username
+                });
+                socket.emit('waiting-for-match');
+            }
+        } catch (error) {
+            console.error('Error in waiting room:', error);
+            socket.emit('matching-error', { message: 'Error finding match' });
+        }
+    });
+
+    socket.on('leave-waiting-room', (userId) => {
+        // Remove user from waiting room
+        for (const user of waitingRoom) {
+            if (user.userId === userId) {
+                waitingRoom.delete(user);
+                console.log(`User ${userId} left waiting room`);
+                break;
+            }
         }
     });
 });

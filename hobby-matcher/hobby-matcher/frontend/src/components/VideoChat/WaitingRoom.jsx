@@ -9,11 +9,19 @@ const WaitingRoom = () => {
     const { socket, user } = useAuth();
 
     useEffect(() => {
-        if (socket) {
-            // Listen for match found
-            socket.on('random-match-found', ({ roomId, peer }) => {
+        if (socket && user) {
+            // Join waiting room on component mount
+            socket.emit('join-waiting-room', {
+                userId: user._id,
+                username: user.username
+            });
+
+            // Listen for match
+            socket.on('match-found', ({ roomId, peer }) => {
                 console.log('Match found:', peer.username);
+                // Show match notification
                 alert(`Connected with ${peer.username}!`);
+                // Navigate to video chat
                 navigate(`/video-chat/${roomId}`);
             });
 
@@ -25,22 +33,18 @@ const WaitingRoom = () => {
         }
 
         return () => {
-            if (socket) {
-                socket.off('random-match-found');
+            if (socket && user) {
+                // Leave waiting room on component unmount
+                socket.emit('leave-waiting-room', user._id);
+                socket.off('match-found');
                 socket.off('matching-error');
             }
         };
-    }, [socket, navigate]);
-
-
-
-
-
-   
+    }, [socket, user, navigate]);
 
     const handleCancel = () => {
         if (socket && user) {
-            socket.emit('leave-random-queue', user._id);
+            socket.emit('leave-waiting-room', user._id);
         }
         navigate('/dashboard');
     };
