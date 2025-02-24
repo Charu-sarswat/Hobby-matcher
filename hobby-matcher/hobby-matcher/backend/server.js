@@ -112,6 +112,7 @@ io.on('connection', (socket) => {
         for (const user of waitingRoom) {
             if (user.socketId === socket.id) {
                 waitingRoom.delete(user);
+                console.log(`User removed from waiting room due to disconnect. Current size: ${waitingRoom.size}`);
                 break;
             }
         }
@@ -251,21 +252,26 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('join-waiting-room', (userData) => {
+    socket.on('join-waiting-room', async (userData) => {
         try {
             console.log('User joined waiting room:', userData.username);
             
-            // Check if there's already someone in the waiting room
-            if (waitingRoom.size > 0) {
-                // Get the first waiting user
-                const waitingUser = Array.from(waitingRoom)[0];
-                waitingRoom.delete(waitingUser);
+            // Find if there's anyone else in the waiting room
+            const waitingUsers = Array.from(waitingRoom);
+            const availableMatch = waitingUsers.find(user => 
+                user.userId !== userData.userId && 
+                user.socketId !== socket.id
+            );
 
-                // Create a unique room ID for the pair
+            if (availableMatch) {
+                // Remove the matched user from waiting room
+                waitingRoom.delete(availableMatch);
+
+                // Create a unique room ID
                 const roomId = `random-${Date.now()}`;
 
                 // Notify both users about the match
-                io.to(waitingUser.socketId).emit('match-found', {
+                io.to(availableMatch.socketId).emit('match-found', {
                     roomId,
                     peer: {
                         username: userData.username,
@@ -276,19 +282,22 @@ io.on('connection', (socket) => {
                 socket.emit('match-found', {
                     roomId,
                     peer: {
-                        username: waitingUser.username,
-                        id: waitingUser.userId
+                        username: availableMatch.username,
+                        id: availableMatch.userId
                     }
                 });
 
+                console.log(`Matched users: ${userData.username} and ${availableMatch.username}`);
             } else {
                 // Add current user to waiting room
-                waitingRoom.add({
+                const userInfo = {
                     socketId: socket.id,
                     userId: userData.userId,
                     username: userData.username
-                });
+                };
+                waitingRoom.add(userInfo);
                 socket.emit('waiting-for-match');
+                console.log(`Added ${userData.username} to waiting room. Current size: ${waitingRoom.size}`);
             }
         } catch (error) {
             console.error('Error in waiting room:', error);
@@ -301,7 +310,7 @@ io.on('connection', (socket) => {
         for (const user of waitingRoom) {
             if (user.userId === userId) {
                 waitingRoom.delete(user);
-                console.log(`User ${userId} left waiting room`);
+                console.log(`User ${userId} left waiting room. Current size: ${waitingRoom.size}`);
                 break;
             }
         }

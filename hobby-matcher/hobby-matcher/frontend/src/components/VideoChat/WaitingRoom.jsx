@@ -10,36 +10,35 @@ const WaitingRoom = () => {
 
     useEffect(() => {
         if (socket && user) {
-            // Join waiting room on component mount
+            // Join waiting room
             socket.emit('join-waiting-room', {
                 userId: user._id,
                 username: user.username
             });
 
             // Listen for match
-            socket.on('match-found', ({ roomId, peer }) => {
+            const handleMatch = ({ roomId, peer }) => {
                 console.log('Match found:', peer.username);
-                // Show match notification
                 alert(`Connected with ${peer.username}!`);
-                // Navigate to video chat
                 navigate(`/video-chat/${roomId}`);
-            });
+            };
 
             // Listen for errors
-            socket.on('matching-error', ({ message }) => {
+            const handleError = ({ message }) => {
                 alert(message);
                 navigate('/dashboard');
-            });
-        }
+            };
 
-        return () => {
-            if (socket && user) {
-                // Leave waiting room on component unmount
+            socket.on('match-found', handleMatch);
+            socket.on('matching-error', handleError);
+
+            return () => {
+                // Cleanup
                 socket.emit('leave-waiting-room', user._id);
-                socket.off('match-found');
-                socket.off('matching-error');
-            }
-        };
+                socket.off('match-found', handleMatch);
+                socket.off('matching-error', handleError);
+            };
+        }
     }, [socket, user, navigate]);
 
     const handleCancel = () => {
