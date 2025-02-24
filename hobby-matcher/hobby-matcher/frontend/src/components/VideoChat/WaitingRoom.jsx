@@ -46,6 +46,7 @@ const WaitingRoom = () => {
             socket.off('random-match-found');
         };
     }, [socket, navigate]);
+
     const handleCancel = () => {
         if (socket && user) {
             socket.emit('leave-random-queue', user._id);
