@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Typography, CircularProgress, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -8,8 +8,32 @@ const WaitingRoom = () => {
     const navigate = useNavigate();
     const { socket, user } = useAuth();
 
-    const handleCancel = () => {
+    useEffect(() => {
         if (socket) {
+            // Listen for match found
+            socket.on('random-match-found', ({ roomId, peer }) => {
+                console.log('Match found:', peer.username);
+                alert(`Connected with ${peer.username}!`);
+                navigate(`/video-chat/${roomId}`);
+            });
+
+            // Listen for errors
+            socket.on('matching-error', ({ message }) => {
+                alert(message);
+                navigate('/dashboard');
+            });
+        }
+
+        return () => {
+            if (socket) {
+                socket.off('random-match-found');
+                socket.off('matching-error');
+            }
+        };
+    }, [socket, navigate]);
+
+    const handleCancel = () => {
+        if (socket && user) {
             socket.emit('leave-random-queue', user._id);
         }
         navigate('/dashboard');

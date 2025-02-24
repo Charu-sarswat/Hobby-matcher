@@ -5,7 +5,7 @@ const connectDB = require('./config/db');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const User = require('./models/User');
-const waitingUsers = new Set();
+const waitingUsers = new Map(); // Change to Map for better tracking
 
 // Load correct env file
 dotenv.config({
@@ -99,11 +99,13 @@ io.on('connection', (socket) => {
         console.log('User disconnected:', socket.id);
 
         // Remove from waiting queue
-        waitingUsers.forEach(user => {
+        for (const [userId, user] of waitingUsers) {
             if (user.socketId === socket.id) {
-                waitingUsers.delete(user);
+                waitingUsers.delete(userId);
+                console.log(`User ${userId} removed from queue due to disconnect`);
+                break;
             }
-        });
+        }
     });
 
     // Handle WebRTC signaling
@@ -176,46 +178,68 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('join-random-queue', (userData) => {
-        console.log('User joined random queue:', userData.username);
+    socket.on('join-random-queue', async (userData) => {
+        try {
+            console.log('User joined random queue:', userData.username);
 
-        // Check if there's someone waiting
-        const waitingUser = Array.from(waitingUsers)[0];
-        if (waitingUser && waitingUser.userId !== userData.userId) {
-            // Create a room ID
-            const roomId = `random-${Date.now()}`;
+            // First, check if user is already in queue
+            if (waitingUsers.has(userData.userId)) {
+                return;
+            }
 
-            // Remove waiting user from queue
-            waitingUsers.delete(waitingUser);
+            // Find another waiting user who isn't the current user
+            let match = null;
+            for (const [waitingUserId, waitingUser] of waitingUsers) {
+                if (waitingUserId !== userData.userId) {
+                    match = waitingUser;
+                    waitingUsers.delete(waitingUserId);
+                    break;
+                }
+            }
 
-            // Notify both users about the match
-            io.to(waitingUser.socketId).emit('random-match-found', {
-                roomId,
-                peer: { username: userData.username, id: userData.userId }
-            });
+            if (match) {
+                // Create a unique room ID
+                const roomId = `random-${Date.now()}`;
 
-            socket.emit('random-match-found', {
-                roomId,
-                peer: { username: waitingUser.username, id: waitingUser.userId }
-            });
-        } else {
-            // Add user to waiting queue
-            waitingUsers.add({
-                socketId: socket.id,
-                userId: userData.userId,
-                username: userData.username
-            });
-            socket.emit('waiting-for-match');
+                // Notify both users about the match
+                io.to(match.socketId).emit('random-match-found', {
+                    roomId,
+                    peer: {
+                        username: userData.username,
+                        id: userData.userId
+                    }
+                });
+
+                socket.emit('random-match-found', {
+                    roomId,
+                    peer: {
+                        username: match.username,
+                        id: match.userId
+                    }
+                });
+
+            } else {
+                // Add current user to waiting queue
+                waitingUsers.set(userData.userId, {
+                    socketId: socket.id,
+                    userId: userData.userId,
+                    username: userData.username
+                });
+                socket.emit('waiting-for-match');
+            }
+
+        } catch (error) {
+            console.error('Error in random matching:', error);
+            socket.emit('matching-error', { message: 'Error finding match' });
         }
     });
 
     socket.on('leave-random-queue', (userId) => {
         // Remove user from waiting queue
-        waitingUsers.forEach(user => {
-            if (user.userId === userId) {
-                waitingUsers.delete(user);
-            }
-        });
+        if (waitingUsers.has(userId)) {
+            waitingUsers.delete(userId);
+            console.log(`User ${userId} left random queue`);
+        }
     });
 });
 
