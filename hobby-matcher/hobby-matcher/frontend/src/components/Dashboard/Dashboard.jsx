@@ -27,7 +27,6 @@ import ExploreIcon from '@mui/icons-material/Explore';
 import { motion } from 'framer-motion';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import CasinoIcon from '@mui/icons-material/Casino';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const Dashboard = () => {
@@ -115,16 +114,6 @@ const Dashboard = () => {
         });
 
         navigate(`/video-chat/${roomId}`);
-    };
-
-    const handleRandomCall = () => {
-        if (socket) {
-            socket.emit('join-random-queue', {
-                userId: user._id,
-                username: user.username
-            });
-            navigate('/video-chat/waiting');
-        }
     };
 
     // const handleLogout = () => {
@@ -330,31 +319,6 @@ const Dashboard = () => {
                             </Box>
                         </Typography>
                     </Paper>
-                </Grid>
-                <Grid item xs={12}>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <Button
-                            variant="contained"
-                            onClick={() => handleRandomCall()}
-                            startIcon={<CasinoIcon />}
-                            sx={{
-                                width: '100%',
-                                py: 2,
-                                mb: 3,
-                                background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
-                                '&:hover': {
-                                    background: 'linear-gradient(135deg, #FF8E53 0%, #FF6B6B 100%)',
-                                },
-                                fontSize: '1.1rem'
-                            }}
-                        >
-                            Random Call
-                        </Button>
-                    </motion.div>
                 </Grid>
                 <Grid item xs={12}>
                     <Box className="matches-container">

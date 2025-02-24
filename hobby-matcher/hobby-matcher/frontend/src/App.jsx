@@ -8,7 +8,7 @@ import Register from './components/Auth/Register';
 import Dashboard from './components/Dashboard/Dashboard';
 import VideoChat from './components/VideoChat/VideoChat';
 import Navbar from './components/Common/Navbar';
-import WaitingRoom from './components/VideoChat/WaitingRoom';
+
 
 const theme = createTheme({
     palette: {
@@ -47,14 +47,6 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <VideoChat />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/video-chat/waiting"
-                                    element={
-                                        <ProtectedRoute>
-                                            <WaitingRoom />
                                         </ProtectedRoute>
                                     }
                                 />
