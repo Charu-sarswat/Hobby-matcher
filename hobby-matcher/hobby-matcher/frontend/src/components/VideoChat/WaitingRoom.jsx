@@ -38,7 +38,7 @@ const WaitingRoom = () => {
         socket.on('random-match-found', ({ roomId, peer }) => {
             console.log('Match found:', roomId, peer);
             // Navigate to the video chat room once a match is found
-            navigate(/video-chat/${roomId});
+            navigate(`/video-chat/${roomId}`);
         });
 
         // Cleanup listener on unmount
